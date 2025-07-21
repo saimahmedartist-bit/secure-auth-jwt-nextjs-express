@@ -17,11 +17,10 @@ exports.registerUser = async (req, res) => {
       return res.status(409).json({ message: "User already exists" });
     }
 
-    // ❌ Do NOT hash password here, let User model handle it via pre-save
     const newUser = await User.create({
       name,
       email,
-      password // will be hashed in User.js
+      password // Will be hashed in model via pre-save
     });
 
     res.status(201).json({
@@ -59,13 +58,32 @@ exports.loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '1h'
+    // ✅ Access Token (15 mins)
+    const accessToken = jwt.sign(
+      { userId: user._id },
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    // ✅ Refresh Token (7 days)
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // ✅ Set refresh token in httpOnly cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
+    // ✅ Return access token + user info
     res.status(200).json({
       message: "Login successful",
-      token,
+      token: accessToken,
       user: {
         id: user._id,
         name: user.name,

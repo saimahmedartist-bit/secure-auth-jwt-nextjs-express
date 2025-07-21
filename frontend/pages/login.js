@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useRouter } from 'next/router';
 import styles from './login.module.css';
 
-export default function Login() {
+export default function Login({ setToken }) {
   const router = useRouter();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [message, setMessage] = useState('');
@@ -15,9 +15,13 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/login', formData);
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      const res = await axios.post('http://localhost:5000/api/login', formData, {
+        withCredentials: true, // Required to receive httpOnly cookie
+      });
+
+      // ✅ Save token in memory only (not localStorage)
+      setToken(res.data.token);
+
       setMessage('Login successful! Redirecting...');
       setTimeout(() => router.push('/dashboard'), 1500);
     } catch (err) {

@@ -1,31 +1,48 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import axios from 'axios';
 
-export default function Dashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
+export default function Dashboard({ token }) {
+  const [userId, setUserId] = useState(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // ✅ Client-side check only
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('token');
-      const userData = localStorage.getItem('user');
-
-      if (!token) {
-        router.push('/login');
-      } else {
-        setIsAuthenticated(true);
-        if (userData) {
-          setUser(JSON.parse(userData));
-        }
-      }
+    if (!token) {
+      router.push('/login');
+      return;
     }
-  }, []);
 
-  if (!isAuthenticated) {
-    return <p>Checking authentication...</p>;
-  }
+    const fetchProtected = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/protected', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setUserId(res.data.userId);
+      } catch (err) {
+        console.error('Unauthorized:', err);
+        router.push('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProtected();
+  }, [token]);
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('http://localhost:5000/api/logout', {}, { withCredentials: true });
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      router.push('/login');
+    }
+  };
+
+  if (loading) return <p>Checking authentication...</p>;
 
   return (
     <div style={{
@@ -39,8 +56,8 @@ export default function Dashboard() {
       fontFamily: 'Arial',
     }}>
       <h1>Welcome to the Dashboard ✅</h1>
-      {user && <h2>Welcome, {user.name} 👋</h2>}
-      <p>You are successfully logged in.</p>
+      {userId && <h2>User ID: {userId}</h2>}
+      <p>You are successfully authenticated using token.</p>
 
       <button
         style={{
@@ -53,11 +70,7 @@ export default function Dashboard() {
           cursor: 'pointer',
           borderRadius: '5px'
         }}
-        onClick={() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          router.push('/login');
-        }}
+        onClick={handleLogout}
       >
         Logout
       </button>

@@ -2,8 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser'); // ✅ Added
 const connectDB = require('./config/db');
-const authRoutes = require('./routes/authRoutes'); // ✅ NEW LINE
+const authRoutes = require('./routes/authRoutes');
 
 console.log("🟡 Starting server.js");
 
@@ -14,10 +15,15 @@ console.log("✅ .env loaded");
 connectDB();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000', // ✅ adjust this to your frontend domain
+  credentials: true, // ✅ allow cookies from frontend
+}));
 app.use(bodyParser.json());
+app.use(cookieParser()); // ✅ required to read refreshToken from cookie
 
-app.use('/api', authRoutes); // ✅ NEW LINE
+// API Routes
+app.use('/api', authRoutes);
 
 // Test route
 app.get('/', (req, res) => {
