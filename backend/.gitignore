@@ -1,5 +1,7 @@
-# Node modules and build
+# Node dependencies
 node_modules/
+
+# Build output
 dist/
 
 # Environment variables
